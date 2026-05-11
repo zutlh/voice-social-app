@@ -4,6 +4,19 @@ import 'package:frontend/app/theme.dart';
 import 'package:frontend/models/gift.dart';
 import 'package:frontend/services/api_client.dart';
 
+String giftEmoji(String name) {
+  switch (name) {
+    case '小星星': return '⭐';
+    case '玫瑰花': return '🌹';
+    case '巧克力': return '🍫';
+    case '烟花': return '🎆';
+    case '城堡': return '🏰';
+    case '跑车': return '🏎';
+    case '钻戒': return '💍';
+    default: return '🎁';
+  }
+}
+
 class GiftSheet extends ConsumerStatefulWidget {
   final int? roomId;
 
@@ -57,7 +70,7 @@ class _GiftSheetState extends ConsumerState<GiftSheet> {
             mainAxisSize: MainAxisSize.min,
             children: [
               Text(
-                '${gift.icon}  ${gift.price} 金币/个',
+                '${giftEmoji(gift.name)}  ${gift.price} 金币/个',
                 style: const TextStyle(
                   fontSize: 18,
                   color: Colors.white,
@@ -203,7 +216,7 @@ class _GiftTile extends StatelessWidget {
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Text(
-              gift.icon,
+              giftEmoji(gift.name),
               style: const TextStyle(fontSize: 32),
             ),
             const SizedBox(height: 4),

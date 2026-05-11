@@ -2,13 +2,132 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:frontend/services/auth_service.dart';
+import 'package:frontend/services/api_client.dart';
 import 'package:frontend/app/theme.dart';
 
-class ProfilePage extends ConsumerWidget {
+class ProfilePage extends ConsumerStatefulWidget {
   const ProfilePage({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<ProfilePage> createState() => _ProfilePageState();
+}
+
+class _ProfilePageState extends ConsumerState<ProfilePage> {
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) => _loadProfile());
+  }
+
+  Future<void> _loadProfile() async {
+    try {
+      final api = ref.read(apiClientProvider);
+      await api.get('/api/v1/auth/profile');
+      // reload profile data
+      if (!mounted) return;
+      setState(() {});
+    } catch (_) {}
+  }
+
+  Future<void> _editNickname(String currentNickname) async {
+    final controller = TextEditingController(text: currentNickname);
+    final result = await showDialog<String>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: AppTheme.surface,
+        title: const Text('修改昵称', style: TextStyle(color: Colors.white)),
+        content: TextField(
+          controller: controller,
+          maxLength: 20,
+          decoration: const InputDecoration(hintText: '请输入新昵称'),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('取消'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(ctx, controller.text.trim()),
+            child: const Text('保存'),
+          ),
+        ],
+      ),
+    );
+
+    if (result == null || result.isEmpty || !mounted) return;
+
+    try {
+      final api = ref.read(apiClientProvider);
+      await api.put('/api/v1/auth/profile', data: {'nickname': result});
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('昵称已更新')),
+      );
+      _loadProfile();
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('修改失败: $e')),
+      );
+    }
+  }
+
+  Future<void> _editGender(String currentGender) async {
+    final result = await showDialog<String>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: AppTheme.surface,
+        title: const Text('选择性别', style: TextStyle(color: Colors.white)),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(
+              title: const Text('男', style: TextStyle(color: Colors.white)),
+              leading: Icon(
+                currentGender == 'MALE' ? Icons.radio_button_checked : Icons.radio_button_unchecked,
+                color: AppTheme.primary,
+              ),
+              onTap: () => Navigator.pop(ctx, 'MALE'),
+            ),
+            ListTile(
+              title: const Text('女', style: TextStyle(color: Colors.white)),
+              leading: Icon(
+                currentGender == 'FEMALE' ? Icons.radio_button_checked : Icons.radio_button_unchecked,
+                color: AppTheme.primary,
+              ),
+              onTap: () => Navigator.pop(ctx, 'FEMALE'),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('取消'),
+          ),
+        ],
+      ),
+    );
+
+    if (result == null || !mounted) return;
+
+    try {
+      final api = ref.read(apiClientProvider);
+      await api.put('/api/v1/auth/profile', data: {'gender': result});
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('性别已更新')),
+      );
+      _loadProfile();
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('修改失败: $e')),
+      );
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final authState = ref.watch(authProvider);
     final user = authState.user;
 
@@ -27,7 +146,6 @@ class ProfilePage extends ConsumerWidget {
         child: Column(
           children: [
             const SizedBox(height: 24),
-            // Avatar
             CircleAvatar(
               radius: 50,
               backgroundColor: AppTheme.card,
@@ -52,8 +170,6 @@ class ProfilePage extends ConsumerWidget {
                     ),
             ),
             const SizedBox(height: 24),
-
-            // Info card
             Card(
               color: AppTheme.surface,
               shape: RoundedRectangleBorder(
@@ -69,6 +185,7 @@ class ProfilePage extends ConsumerWidget {
                       value: user?.nickname.isNotEmpty == true
                           ? user!.nickname
                           : '未设置',
+                      onTap: () => _editNickname(user?.nickname ?? ''),
                     ),
                     const Divider(color: AppTheme.background),
                     _InfoRow(
@@ -83,15 +200,13 @@ class ProfilePage extends ConsumerWidget {
                       icon: Icons.wc,
                       label: '性别',
                       value: _genderLabel(user?.gender),
+                      onTap: () => _editGender(user?.gender ?? 'UNKNOWN'),
                     ),
                   ],
                 ),
               ),
             ),
-
             const SizedBox(height: 32),
-
-            // Logout button
             SizedBox(
               width: double.infinity,
               height: 52,
@@ -136,44 +251,52 @@ class _InfoRow extends StatelessWidget {
   final IconData icon;
   final String label;
   final String value;
+  final VoidCallback? onTap;
 
   const _InfoRow({
     required this.icon,
     required this.label,
     required this.value,
+    this.onTap,
   });
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 8),
-      child: Row(
-        children: [
-          Icon(icon, size: 20, color: AppTheme.textSecondary),
-          const SizedBox(width: 12),
-          Text(
-            label,
-            style: const TextStyle(
-              fontSize: 14,
-              color: AppTheme.textSecondary,
+    return GestureDetector(
+      onTap: onTap,
+      behavior: HitTestBehavior.opaque,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 8),
+        child: Row(
+          children: [
+            Icon(icon, size: 20, color: AppTheme.textSecondary),
+            const SizedBox(width: 12),
+            Text(
+              label,
+              style: const TextStyle(
+                fontSize: 14,
+                color: AppTheme.textSecondary,
+              ),
             ),
-          ),
-          const Spacer(),
-          Text(
-            value,
-            style: const TextStyle(
-              fontSize: 14,
-              color: Colors.white,
-              fontWeight: FontWeight.w500,
+            const Spacer(),
+            Text(
+              value,
+              style: const TextStyle(
+                fontSize: 14,
+                color: Colors.white,
+                fontWeight: FontWeight.w500,
+              ),
             ),
-          ),
-          const SizedBox(width: 8),
-          const Icon(
-            Icons.chevron_right,
-            size: 18,
-            color: AppTheme.textSecondary,
-          ),
-        ],
+            if (onTap != null) ...[
+              const SizedBox(width: 8),
+              const Icon(
+                Icons.chevron_right,
+                size: 18,
+                color: AppTheme.textSecondary,
+              ),
+            ],
+          ],
+        ),
       ),
     );
   }

@@ -12,7 +12,7 @@ class WsClient {
   WsClient({required this.onMessage, this.onDisconnected});
 
   void connect(String token, int roomId) {
-    final uri = Uri.parse('ws://10.0.2.2:8080/ws/room?token=$token&roomId=$roomId');
+    final uri = Uri.parse('ws://localhost:8080/ws/room?token=$token&roomId=$roomId');
     _channel = WebSocketChannel.connect(uri);
     _subscription = _channel!.stream.listen(
       (data) {

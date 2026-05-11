@@ -16,14 +16,8 @@ class _WalletPageState extends ConsumerState<WalletPage> {
   List<Map<String, dynamic>> _orders = [];
   bool _loading = true;
 
-  static const _rechargePlans = [
-    {'amount': 6, 'coins': 60},
-    {'amount': 30, 'coins': 300},
-    {'amount': 68, 'coins': 680},
-    {'amount': 128, 'coins': 1280},
-    {'amount': 328, 'coins': 3280},
-    {'amount': 648, 'coins': 6480},
-  ];
+  List<Map<String, dynamic>> _plans = [];
+  bool _recharging = false;
 
   @override
   void initState() {
@@ -36,24 +30,30 @@ class _WalletPageState extends ConsumerState<WalletPage> {
     try {
       final api = ref.read(apiClientProvider);
 
-      // Load wallet data
       final walletResp = await api.get('/api/v1/wallet');
       final wallet = Wallet.fromJson(walletResp.data['data']);
 
-      // Load order history
+      List<Map<String, dynamic>> plans = [];
+      try {
+        final plansResp = await api.get('/api/v1/recharge/plans');
+        plans = (plansResp.data['data'] as List?)
+                ?.map((e) => e as Map<String, dynamic>)
+                .toList() ??
+            [];
+      } catch (_) {}
+
       List<Map<String, dynamic>> orders = [];
       try {
         final ordersResp = await api.get('/api/v1/recharge/orders');
         orders = (ordersResp.data['data'] as List?)
                 ?.cast<Map<String, dynamic>>() ??
             [];
-      } catch (_) {
-        // Orders endpoint may not exist yet
-      }
+      } catch (_) {}
 
       if (!mounted) return;
       setState(() {
         _wallet = wallet;
+        _plans = plans;
         _orders = orders;
         _loading = false;
       });
@@ -66,20 +66,20 @@ class _WalletPageState extends ConsumerState<WalletPage> {
     }
   }
 
-  Future<void> _recharge(int amount, int coins) async {
+  Future<void> _recharge(String planId, int amount, int coins, int bonus) async {
+    setState(() => _recharging = true);
     try {
       final api = ref.read(apiClientProvider);
-      await api.post('/api/v1/recharge/mock', data: {
-        'amount': amount,
-        'coins': coins,
-      });
+      await api.post('/api/v1/recharge/mock', data: {'planId': planId});
       if (!mounted) return;
+      setState(() => _recharging = false);
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('充值$amount元成功! 获得$coins金币')),
+        SnackBar(content: Text('充值成功! 获得${coins + bonus}金币')),
       );
       _loadData();
     } catch (e) {
       if (!mounted) return;
+      setState(() => _recharging = false);
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('充值失败: $e')),
       );
@@ -119,17 +119,26 @@ class _WalletPageState extends ConsumerState<WalletPage> {
                     ),
                   ),
                   const SizedBox(height: 12),
-                  ..._rechargePlans.map((plan) {
-                    return Padding(
-                      padding: const EdgeInsets.only(bottom: 8),
-                      child: _RechargePlanTile(
-                        amount: plan['amount'] as int,
-                        coins: plan['coins'] as int,
-                        onTap: () =>
-                            _recharge(plan['amount']!, plan['coins']!),
-                      ),
-                    );
-                  }),
+                  if (_recharging)
+                    const Center(child: CircularProgressIndicator())
+                  else
+                    ..._plans.map((plan) {
+                      return Padding(
+                        padding: const EdgeInsets.only(bottom: 8),
+                        child: _RechargePlanTile(
+                          planId: plan['planId'] as String,
+                          amount: plan['amountYuan'] as int,
+                          coins: plan['coins'] as int,
+                          bonus: plan['bonus'] as int,
+                          onTap: () => _recharge(
+                            plan['planId'] as String,
+                            plan['amountYuan'] as int,
+                            plan['coins'] as int,
+                            plan['bonus'] as int,
+                          ),
+                        ),
+                      );
+                    }),
 
                   // Order history
                   if (_orders.isNotEmpty) ...[
@@ -285,13 +294,17 @@ class _SummaryItem extends StatelessWidget {
 }
 
 class _RechargePlanTile extends StatelessWidget {
+  final String planId;
   final int amount;
   final int coins;
+  final int bonus;
   final VoidCallback onTap;
 
   const _RechargePlanTile({
+    required this.planId,
     required this.amount,
     required this.coins,
+    required this.bonus,
     required this.onTap,
   });
 
@@ -303,7 +316,7 @@ class _RechargePlanTile extends StatelessWidget {
       child: ListTile(
         onTap: onTap,
         title: Text(
-          '$amount元',
+          '¥$amount',
           style: const TextStyle(
             fontSize: 16,
             fontWeight: FontWeight.w600,
@@ -311,7 +324,7 @@ class _RechargePlanTile extends StatelessWidget {
           ),
         ),
         subtitle: Text(
-          '获得 $coins 金币',
+          bonus > 0 ? '${coins + bonus}金币 (含赠送$bonus)' : '$coins金币',
           style: const TextStyle(color: AppTheme.textSecondary),
         ),
         trailing: ElevatedButton(
