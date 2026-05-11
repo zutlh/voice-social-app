@@ -39,7 +39,7 @@ public class RoomWebSocketHandler extends TextWebSocketHandler {
 
         Long userId = jwtUtil.getUserId(token);
         Long roomId = Long.parseLong(roomIdStr);
-        sessionManager.register(session.getId(), userId, roomId);
+        sessionManager.register(session.getId(), userId, roomId, session);
 
         log.info("WS connected: userId={}, roomId={}", userId, roomId);
 
@@ -166,7 +166,14 @@ public class RoomWebSocketHandler extends TextWebSocketHandler {
             String json = objectMapper.writeValueAsString(message);
             TextMessage text = new TextMessage(json);
             for (String sid : sessionManager.getRoomSessions(roomId)) {
-                // 在Redis Pub/Sub实现前，仅记录日志
+                try {
+                    WebSocketSession session = sessionManager.getSession(sid);
+                    if (session != null && session.isOpen()) {
+                        session.sendMessage(text);
+                    }
+                } catch (IOException e) {
+                    log.warn("发送消息失败: sid={}", sid);
+                }
             }
             log.debug("房间[{}]广播: {}", roomId, json);
         } catch (Exception e) {

@@ -11,15 +11,18 @@ import java.util.concurrent.ConcurrentHashMap;
 public class WebSocketSessionManager {
 
     private final Map<String, SessionInfo> sessions = new ConcurrentHashMap<>();
+    private final Map<String, WebSocketSession> wsSessions = new ConcurrentHashMap<>();
     private final Map<Long, Set<String>> roomSessions = new ConcurrentHashMap<>();
 
-    public void register(String sessionId, Long userId, Long roomId) {
+    public void register(String sessionId, Long userId, Long roomId, WebSocketSession wsSession) {
         sessions.put(sessionId, new SessionInfo(userId, roomId));
+        wsSessions.put(sessionId, wsSession);
         roomSessions.computeIfAbsent(roomId, k -> ConcurrentHashMap.newKeySet()).add(sessionId);
     }
 
     public void remove(String sessionId) {
         SessionInfo info = sessions.remove(sessionId);
+        wsSessions.remove(sessionId);
         if (info != null) {
             Set<String> set = roomSessions.get(info.roomId);
             if (set != null) {
@@ -31,6 +34,10 @@ public class WebSocketSessionManager {
 
     public SessionInfo get(String sessionId) {
         return sessions.get(sessionId);
+    }
+
+    public WebSocketSession getSession(String sessionId) {
+        return wsSessions.get(sessionId);
     }
 
     public Set<String> getRoomSessions(Long roomId) {

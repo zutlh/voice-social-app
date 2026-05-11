@@ -17,6 +17,18 @@ public class SeatService {
 
     @Transactional
     public void applySeat(Long userId, Long roomId, int seatIndex) {
+        // 先释放该用户已占的其他麦位（一人只能上一个麦）
+        RoomSeat existing = seatMapper.selectOne(
+                new LambdaQueryWrapper<RoomSeat>()
+                        .eq(RoomSeat::getRoomId, roomId)
+                        .eq(RoomSeat::getUserId, userId));
+        if (existing != null) {
+            existing.setStatus("FREE");
+            existing.setUserId(null);
+            existing.setMicOpen(0);
+            seatMapper.updateById(existing);
+        }
+
         RoomSeat seat = seatMapper.selectOne(
                 new LambdaQueryWrapper<RoomSeat>()
                         .eq(RoomSeat::getRoomId, roomId)
