@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:frontend/models/user.dart';
 import 'package:frontend/services/auth_service.dart';
 import 'package:frontend/services/api_client.dart';
 import 'package:frontend/app/theme.dart';
@@ -22,10 +23,10 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
   Future<void> _loadProfile() async {
     try {
       final api = ref.read(apiClientProvider);
-      await api.get('/api/v1/auth/profile');
-      // reload profile data
+      final resp = await api.get('/api/v1/auth/profile');
       if (!mounted) return;
-      setState(() {});
+      final user = User.fromJson(resp.data['data']);
+      ref.read(authProvider.notifier).updateUser(user);
     } catch (_) {}
   }
 

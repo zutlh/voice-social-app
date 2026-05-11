@@ -60,13 +60,20 @@ class RoomToolbar extends ConsumerWidget {
             label: '送礼',
             color: AppTheme.gold,
             onTap: () {
+              final targetUserId = seats
+                  .where((s) => s.isOccupied)
+                  .map((s) => s.userId)
+                  .firstWhere((id) => id != null, orElse: () => null);
               showModalBottomSheet(
                 context: context,
                 backgroundColor: AppTheme.surface,
                 shape: const RoundedRectangleBorder(
                   borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
                 ),
-                builder: (_) => GiftSheet(roomId: roomState.currentRoomId),
+                builder: (_) => GiftSheet(
+                  roomId: roomState.currentRoomId,
+                  toUid: targetUserId ?? 0,
+                ),
               );
             },
           ),

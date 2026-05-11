@@ -139,6 +139,7 @@ class _HomePageState extends ConsumerState<HomePage> {
         );
       },
     );
+    nameController.dispose();
   }
 
   @override

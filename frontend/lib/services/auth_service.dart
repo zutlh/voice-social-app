@@ -68,6 +68,16 @@ class AuthNotifier extends Notifier<AuthState> {
     api.setTokens('', '');
     state = const AuthState();
   }
+
+  void updateUser(User user) {
+    state = AuthState(
+      isLoggedIn: state.isLoggedIn,
+      userId: state.userId,
+      accessToken: state.accessToken,
+      refreshToken: state.refreshToken,
+      user: user,
+    );
+  }
 }
 
 final authProvider = NotifierProvider<AuthNotifier, AuthState>(AuthNotifier.new);

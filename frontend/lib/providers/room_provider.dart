@@ -22,16 +22,24 @@ class RoomNotifier extends Notifier<RoomState> {
 
   Future<void> loadRooms({String? category}) async {
     state = RoomState(rooms: state.rooms, isLoading: true);
-    final api = ref.read(apiClientProvider);
-    final resp = await api.get('/api/v1/rooms', params: {'category': category ?? ''});
-    final list = (resp.data['data']['records'] as List).map((e) => Room.fromJson(e)).toList();
-    state = RoomState(rooms: list);
+    try {
+      final api = ref.read(apiClientProvider);
+      final resp = await api.get('/api/v1/rooms', params: {'category': category ?? ''});
+      final list = (resp.data['data']['records'] as List).map((e) => Room.fromJson(e)).toList();
+      state = RoomState(rooms: list);
+    } catch (e) {
+      state = RoomState(rooms: state.rooms, isLoading: false);
+    }
   }
 
   Future<void> createRoom(String name, String category, int seatCount) async {
-    final api = ref.read(apiClientProvider);
-    await api.post('/api/v1/rooms', data: {'name': name, 'category': category, 'seatCount': seatCount});
-    await loadRooms();
+    try {
+      final api = ref.read(apiClientProvider);
+      await api.post('/api/v1/rooms', data: {'name': name, 'category': category, 'seatCount': seatCount});
+      await loadRooms();
+    } catch (e) {
+      state = RoomState(rooms: state.rooms, isLoading: false);
+    }
   }
 
   Future<void> joinRoom(int roomId) async {

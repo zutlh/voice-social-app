@@ -63,7 +63,7 @@ class _RoomPageState extends ConsumerState<RoomPage> {
 
   void _handleWsMessage(Map<String, dynamic> msg) {
     final type = msg['type'] as String?;
-    final data = msg['data'] as Map<String, dynamic>?;
+    final data = msg['data'];
 
     if (type == null) return;
 
@@ -83,8 +83,6 @@ class _RoomPageState extends ConsumerState<RoomPage> {
   @override
   void dispose() {
     _wsClient?.disconnect();
-    // Leave room via API
-    ref.read(roomProvider.notifier).leaveRoom(widget.roomId);
     super.dispose();
   }
 

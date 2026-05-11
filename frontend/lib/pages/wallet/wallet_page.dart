@@ -162,7 +162,7 @@ class _WalletPageState extends ConsumerState<WalletPage> {
                             color: AppTheme.gold,
                           ),
                           title: Text(
-                            '${order['amount'] ?? 0}元',
+                            '${order['amountYuan'] ?? 0}元',
                             style: const TextStyle(color: Colors.white),
                           ),
                           subtitle: Text(

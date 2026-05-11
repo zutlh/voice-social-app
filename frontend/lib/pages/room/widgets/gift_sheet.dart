@@ -19,8 +19,9 @@ String giftEmoji(String name) {
 
 class GiftSheet extends ConsumerStatefulWidget {
   final int? roomId;
+  final int toUid;
 
-  const GiftSheet({super.key, this.roomId});
+  const GiftSheet({super.key, this.roomId, required this.toUid});
 
   @override
   ConsumerState<GiftSheet> createState() => _GiftSheetState();
@@ -118,6 +119,7 @@ class _GiftSheetState extends ConsumerState<GiftSheet> {
       await api.post('/api/v1/gifts/send', data: {
         'giftId': gift.id,
         'quantity': result,
+        'toUid': widget.toUid,
         if (widget.roomId != null) 'roomId': widget.roomId,
       });
       if (!mounted) return;
