@@ -1,0 +1,29 @@
+# Java
+*.class
+*.jar
+*.war
+target/
+!.mvn/wrapper/maven-wrapper.jar
+
+# Flutter
+.dart_tool/
+.packages
+build/
+*.iml
+.idea/
+.vscode/
+
+# IDE
+.idea/
+*.iml
+.classpath
+.project
+.settings/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Config
+*.log
+.env
