@@ -127,11 +127,18 @@ class _HomePageState extends ConsumerState<HomePage> {
                   return;
                 }
                 Navigator.of(ctx).pop();
-                await ref.read(roomProvider.notifier).createRoom(
-                  name,
-                  localCategory,
-                  localSeatCount,
-                );
+                try {
+                  await ref.read(roomProvider.notifier).createRoom(
+                    name,
+                    localCategory,
+                    localSeatCount,
+                  );
+                } catch (e) {
+                  if (!mounted) return;
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text('创建失败: $e')),
+                  );
+                }
               },
               child: const Text('创建'),
             ),

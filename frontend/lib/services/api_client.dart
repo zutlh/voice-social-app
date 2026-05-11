@@ -1,6 +1,16 @@
 import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+class ApiException implements Exception {
+  final int code;
+  final String message;
+
+  ApiException(this.code, this.message);
+
+  @override
+  String toString() => message;
+}
+
 class ApiClient {
   final Dio _dio = Dio(BaseOptions(
     baseUrl: 'http://localhost:8080',
@@ -11,6 +21,24 @@ class ApiClient {
   String? _refreshToken;
 
   String? get refreshToken => _refreshToken;
+
+  ApiClient() {
+    _dio.interceptors.add(InterceptorsWrapper(
+      onResponse: (response, handler) {
+        final code = response.data?['code'];
+        if (code != null && code != 200) {
+          final message = response.data?['message'] ?? '未知错误';
+          handler.reject(DioException(
+            requestOptions: response.requestOptions,
+            response: response,
+            message: message,
+          ));
+        } else {
+          handler.next(response);
+        }
+      },
+    ));
+  }
 
   void setTokens(String access, String refresh) {
     _accessToken = access;
